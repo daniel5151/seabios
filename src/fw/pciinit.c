@@ -674,6 +674,14 @@ static void
 pci_bios_get_bar(struct pci_device *pci, int bar,
                  int *ptype, u64 *psize, int *pis64)
 {
+    // (daprilik) hack in rudimentary support for compat-mode IDE drives, as
+    // present in Hyper-V
+    if (pci->class == PCI_CLASS_STORAGE_IDE && pci->prog_if == (0x80 | 0b0000)) {
+        dprintf(1, "PCI: report all-zero BAR for IDE controller in compat mode\n");
+        *psize = 0;
+        return;
+    }
+
     u32 ofs = pci_bar(pci, bar);
     u16 bdf = pci->bdf;
     u32 old = pci_config_readl(bdf, ofs);

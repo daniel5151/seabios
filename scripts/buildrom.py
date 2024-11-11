@@ -29,7 +29,8 @@ def main():
     count = len(data)
 
     # Pad to a 512 byte boundary
-    data += b"\0" * (alignpos(count, 512) - count)
+    # (daprilik) HACK: OpenVMM currently requires page-aligned ROM sizes
+    data += b"\0" * (alignpos(count, 4096) - count)
     count = len(data)
 
     # Check if a pci header is present

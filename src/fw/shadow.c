@@ -103,8 +103,13 @@ make_bios_readonly_intel(u16 bdf, u32 pam0)
         pam[i + 1] = 0x11;
     }
 
-    // Write protect 0xf0000-0x100000
-    pam[0] = 0x10;
+    // (daprilik) I _think_ OpenVMM doesn't support write-only mappings, so skip
+    // this write protect for now.
+
+    // // Write protect 0xf0000-0x100000
+    // pam[0] = 0x10;
+
+    dprintf(1, "PAM Write: %04x %04x\n", pamdata.data32[0], pamdata.data32[1]);
 
     // Write PAM settings back to pci config space
     pci_config_writel(bdf, ALIGN_DOWN(pam0, 4), pamdata.data32[0]);
@@ -136,6 +141,13 @@ make_bios_writable(void)
             return;
         }
         if (vendor == PCI_VENDOR_ID_INTEL
+            && device == PCI_DEVICE_ID_INTEL_82443BX_2) {
+            make_bios_writable_intel(bdf, I440FX_PAM0);
+            code_mutable_preinit();
+            ShadowBDF = bdf;
+            return;
+        }
+        if (vendor == PCI_VENDOR_ID_INTEL
             && device == PCI_DEVICE_ID_INTEL_Q35_MCH) {
             make_bios_writable_intel(bdf, Q35_HOST_BRIDGE_PAM0);
             code_mutable_preinit();
@@ -160,7 +172,7 @@ make_bios_readonly(void)
     }
 
     u16 device = pci_config_readw(ShadowBDF, PCI_DEVICE_ID);
-    if (device == PCI_DEVICE_ID_INTEL_82441)
+    if (device == PCI_DEVICE_ID_INTEL_82441 || device == PCI_DEVICE_ID_INTEL_82443BX_2)
         make_bios_readonly_intel(ShadowBDF, I440FX_PAM0);
     else
         make_bios_readonly_intel(ShadowBDF, Q35_HOST_BRIDGE_PAM0);
