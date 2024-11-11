@@ -674,14 +674,6 @@ static void
 pci_bios_get_bar(struct pci_device *pci, int bar,
                  int *ptype, u64 *psize, int *pis64)
 {
-    // (daprilik) hack in rudimentary support for compat-mode IDE drives, as
-    // present in Hyper-V
-    if (pci->class == PCI_CLASS_STORAGE_IDE && pci->prog_if == (0x80 | 0b0000)) {
-        dprintf(1, "PCI: report all-zero BAR for IDE controller in compat mode\n");
-        *psize = 0;
-        return;
-    }
-
     u32 ofs = pci_bar(pci, bar);
     u16 bdf = pci->bdf;
     u32 old = pci_config_readl(bdf, ofs);
@@ -716,6 +708,9 @@ pci_bios_get_bar(struct pci_device *pci, int bar,
         *psize = (~(val & mask)) + 1;
     } else {
         *psize = ((~(val & mask)) + 1) & 0xffffffff;
+        if (type == PCI_REGION_TYPE_IO) {
+            *psize = (u16)*psize;
+        }
     }
     *ptype = type;
     *pis64 = is64;
@@ -897,6 +892,7 @@ static int pci_bios_check_devices(struct pci_bus *busses)
             int type, is64;
             u64 size;
             pci_bios_get_bar(pci, i, &type, &size, &is64);
+            dprintf(1, "PCI: vd=%04x:%04x %d size %4llx\n", pci->vendor, pci->device,  type, size);
             if (size == 0)
                 continue;
 
